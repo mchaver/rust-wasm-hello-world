@@ -1,0 +1,11 @@
+[package]
+name = "hello-world"
+version = "0.1.0"
+authors = ["James Haver <mchaver@gmail.com>"]
+
+[lib]
+crate-type = ["cdylib"]
+
+# cargo build --target wasm32-unknown-unknown --release
+
+[dependencies]

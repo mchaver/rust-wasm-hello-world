@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+     
+     class QuickMaths {
+       constructor(instance) {
+         this.instance = instance;
+       }
+
+       difference(n1, n2) {
+         const { compute } = this.instance.exports;
+         const op = this.copyJsStringToRust("DIFF");
+         return compute(op, n1, n2);
+       }
+
+       copyJsStringToRust(jsString) {
+         const { memory, stringPrepare, stringData, stringLen } = this.instance.exports;
+
+         const encoder = new TextEncoder();
+         const encodedString = encoder.encode(jsString);
+
+         // Ask Rust code to allocate a string inside of the module's memory
+         const rustString = stringPrepare(encodedString.length);
+
+         // Get a JS view of the string data
+         const rustStringData = stringData(rustString);
+         const asBytes = new Uint8Array(memory.buffer, rustStringData, encodedString.length);
+
+         // Copy the UTF-8 into the WASM memory.
+         asBytes.set(encodedString);
+
+         return rustString;
+       }
+     }
+
+     request = new XMLHttpRequest();
+     request.open('GET', 'hello_world.gc.wasm');
+     request.responseType = 'arraybuffer';
+     request.send();
+
+     request.onload = function() {
+       var bytes = request.response;
+       WebAssembly.instantiate(bytes).then(results => {
+         var instance = results.instance;
+         console.log(instance.exports.add_one(2));
+
+         const maffs = new QuickMaths(instance);
+         console.log(maffs.difference(100, 201));
+
+
+         // obtain the module memory
+         const linearMemory = instance.exports.memory;
+         
+         // create a buffer starting at the reference to the exported string
+         const offset = instance.exports.get_hello();
+         const stringBuffer = new Uint8Array(linearMemory.buffer, offset,
+                                             instance.exports.get_hello_len());
+
+         // create a string from this buffer
+         let str = '';
+         for (let i = 0; i < stringBuffer.length; i++) {
+           str += String.fromCharCode(stringBuffer[i]);
+         }
+
+         console.log(str);
+
+         instance.exports.set_goodbye();
+         // create a buffer starting at the reference to the exported string
+         const offset2 = instance.exports.get_hello();
+         const stringBuffer2 = new Uint8Array(linearMemory.buffer, offset2,
+                                             instance.exports.get_hello_len());
+
+         // create a string from this buffer
+         let str2 = '';
+         for (let i = 0; i < stringBuffer2.length; i++) {
+           str2 += String.fromCharCode(stringBuffer2[i]);
+         }
+
+         console.log(str2);
+       });
+     };
+
+    </script>
+  </head>
+  <body></body>
+</html>
